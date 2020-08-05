@@ -3,13 +3,13 @@ CLUSTER_MODE=$1
 USERNAME=$(whoami)
 
 MAX_SYSTEM_MEMORY=$(free -m | awk '/^Mem:/{print $2}')M
-DEVICE_MEMORY_LIMIT="25GB"
-POOL_SIZE="30GB"
+DEVICE_MEMORY_LIMIT="12GB"
+POOL_SIZE="12GB"
 
 # Fill in your environment name and conda path on each node
-TPCX_BB_HOME="/home/$USERNAME/shared/tpcx-bb"
+TPCX_BB_HOME="/gpfs/fs1/$USERNAME/tpcx-bb"
 CONDA_ENV_NAME="rapids-tpcx-bb"
-CONDA_ENV_PATH="/home/$USERNAME/conda/etc/profile.d/conda.sh"
+CONDA_ENV_PATH="/gpfs/fs1/$USERNAME/miniconda2/etc/profile.d/conda.sh"
 
 # TODO: Unify interface/IP setting/getting for cluster startup
 # and scheduler file
@@ -44,7 +44,7 @@ export DASK_DISTRIBUTED__COMM__RETRY__DELAY__MAX="60s"
 # Setup scheduler
 if [ "$HOSTNAME" = $SCHEDULER ]; then
   if [ "$CLUSTER_MODE" = "NVLINK" ]; then
-     CUDA_VISIBLE_DEVICES='0' DASK_UCX__CUDA_COPY=True DASK_UCX__TCP=True DASK_UCX__NVLINK=True DASK_UCX__INFINIBAND=False DASK_UCX__RDMACM=False nohup dask-scheduler --dashboard-address 8787 --interface $INTERFACE --protocol ucx > $LOGDIR/scheduler.log 2>&1 &
+      CUDA_VISIBLE_DEVICES='0' DASK_UCX__CUDA_COPY=True DASK_UCX__TCP=True DASK_UCX__NVLINK=True DASK_UCX__INFINIBAND=False DASK_UCX__RDMACM=False nohup dask-scheduler --dashboard-address 8787 --interface $INTERFACE --protocol ucx > $LOGDIR/scheduler.log 2>&1 &
   fi
   
   if [ "$CLUSTER_MODE" = "TCP" ]; then
@@ -55,7 +55,8 @@ fi
 
 # Setup workers
 if [ "$CLUSTER_MODE" = "NVLINK" ]; then
-        dask-cuda-worker --device-memory-limit $DEVICE_MEMORY_LIMIT --local-directory $WORKER_DIR  --rmm-pool-size=$POOL_SIZE --memory-limit=$MAX_SYSTEM_MEMORY --enable-tcp-over-ucx --enable-nvlink  --disable-infiniband --scheduler-file $SCHEDULER_FILE >> $LOGDIR/worker.log 2>&1 &
+#    /gpfs/fs1/esoha/nsight-systems-2020.3.1/bin/nsys profile --trace=cuda,nvtx dask-cuda-worker --device-memory-limit $DEVICE_MEMORY_LIMIT --local-directory $WORKER_DIR  --rmm-pool-size=$POOL_SIZE --memory-limit=$MAX_SYSTEM_MEMORY --enable-tcp-over-ucx --enable-nvlink  --disable-infiniband --scheduler-file $SCHEDULER_FILE >> $LOGDIR/worker.log 2>&1 &
+    /gpfs/sw/software/CUDA/10.1.243/nsight-systems-2019.3.7.5/Target-x86_64/x86_64/nsys launch --trace=cuda,nvtx,osrt dask-cuda-worker --device-memory-limit $DEVICE_MEMORY_LIMIT --local-directory $WORKER_DIR --rmm-pool-size=$POOL_SIZE --enable-tcp-over-ucx --enable-nvlink  --disable-infiniband --scheduler-file $SCHEDULER_FILE >> $LOGDIR/worker.log 2>&1 &
 fi
 
 if [ "$CLUSTER_MODE" = "TCP" ]; then

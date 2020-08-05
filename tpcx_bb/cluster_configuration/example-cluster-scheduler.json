@@ -1,6 +1,6 @@
 {
   "type": "Scheduler",
-  "address": "ucx://172.22.1.26:8786",
+  "address": "ucx://192.168.40.11:8786",
   "services": {
     "dashboard": 8787
   },

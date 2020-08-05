@@ -23,7 +23,7 @@ from xbb_tools.utils import (
     run_query,
 )
 from xbb_tools.readers import build_reader
-
+import time
 
 q07_HIGHER_PRICE_RATIO = 1.2
 # --store_sales date
@@ -85,6 +85,7 @@ def read_tables(config):
 
 
 def main(client, config):
+    print("read start " + str(time.time()))
     (
         item_df,
         store_sales_df,
@@ -98,9 +99,11 @@ def main(client, config):
         compute_result=config["get_read_time"],
         dask_profile=config["dask_profile"],
     )
+    print("read end " + str(time.time()))
 
     high_price_items_df = create_high_price_items_df(item_df)
     del item_df
+    print("high price " + str(time.time()))
 
     ### Query 0. Date Time Filteration Logic
     filtered_date_df = date_dim_df.query(
@@ -149,7 +152,7 @@ def main(client, config):
     result_df = result_df.reset_index(drop=False).rename(
         columns={"index": "ca_state", "ca_state": "cnt"}
     )
-
+    print("main done " + str(time.time()))
     return result_df
 
 
@@ -161,3 +164,4 @@ if __name__ == "__main__":
     config = tpcxbb_argparser()
     client, bc = attach_to_cluster(config)
     run_query(config=config, client=client, query_func=main)
+    print("done " + str(time.time()))

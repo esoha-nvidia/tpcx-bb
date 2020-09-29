@@ -99,9 +99,11 @@ class ParquetReader(Reader):
         return self.table_path_mapping.keys()
 
     def read(self, table, relevant_cols=None, **kwargs):
+        print("now read")
         import dask_cudf
 
         filepath = self.table_path_mapping[table]
+        print("We're here\n")
         # we ignore split_row_groups if gather_statistics=False
         if self.split_row_groups:
 
@@ -147,6 +149,7 @@ class CSVReader(Reader):
 
 
 def build_reader(basepath, data_format="parquet", **kwargs):
+    print("build reader")
     assert data_format in ("csv", "parquet", "orc")
 
     if data_format in ("csv",):

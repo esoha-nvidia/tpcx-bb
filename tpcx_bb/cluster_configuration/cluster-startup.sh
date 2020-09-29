@@ -55,7 +55,7 @@ fi
 
 # Setup workers
 if [ "$CLUSTER_MODE" = "NVLINK" ]; then
-    nsys launch --trace=cuda,nvtx,osrt dask-cuda-worker --device-memory-limit $DEVICE_MEMORY_LIMIT --local-directory $WORKER_DIR --rmm-pool-size=$POOL_SIZE --enable-tcp-over-ucx --enable-nvlink  --disable-infiniband --scheduler-file $SCHEDULER_FILE >> $LOGDIR/worker.log 2>&1 &
+    nsys launch --cuda-memory-usage=true --trace=cuda,nvtx,osrt dask-cuda-worker --device-memory-limit $DEVICE_MEMORY_LIMIT --local-directory $WORKER_DIR --enable-tcp-over-ucx --enable-nvlink  --disable-infiniband --scheduler-file $SCHEDULER_FILE >> $LOGDIR/worker.log 2>&1 &
     #dask-cuda-worker --device-memory-limit $DEVICE_MEMORY_LIMIT --local-directory $WORKER_DIR --rmm-pool-size=$POOL_SIZE --enable-tcp-over-ucx --enable-nvlink  --disable-infiniband --scheduler-file $SCHEDULER_FILE >> $LOGDIR/worker.log 2>&1 &
 fi
 

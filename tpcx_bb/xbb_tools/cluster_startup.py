@@ -30,15 +30,27 @@ def get_config_options():
     In case it is not previously set, returns a default value for each one.
 
     Returns a dictionary object.
+    For more info: https://docs.blazingdb.com/docs/config_options
     """
     config_options = {}
     config_options['JOIN_PARTITION_SIZE_THRESHOLD'] = os.environ.get("JOIN_PARTITION_SIZE_THRESHOLD", 300000000)
-    config_options['BLAZING_DEVICE_MEM_CONSUMPTION_THRESHOLD'] = os.environ.get("BLAZING_DEVICE_MEM_CONSUMPTION_THRESHOLD", 0.8)
-    config_options['BLAZING_LOGGING_DIRECTORY'] = os.environ.get("BLAZING_LOGGING_DIRECTORY", 'blazing_log')
     config_options['MAX_DATA_LOAD_CONCAT_CACHE_BYTE_SIZE'] =  os.environ.get("MAX_DATA_LOAD_CONCAT_CACHE_BYTE_SIZE", 300000000)
+    config_options['BLAZING_DEVICE_MEM_CONSUMPTION_THRESHOLD'] = os.environ.get("BLAZING_DEVICE_MEM_CONSUMPTION_THRESHOLD", 0.6)
+    config_options['BLAZ_HOST_MEM_CONSUMPTION_THRESHOLD'] = os.environ.get("BLAZ_HOST_MEM_CONSUMPTION_THRESHOLD", 0.6)
+    config_options['MAX_KERNEL_RUN_THREADS'] = os.environ.get("MAX_KERNEL_RUN_THREADS", 3)
+    config_options['TABLE_SCAN_KERNEL_NUM_THREADS'] = os.environ.get("TABLE_SCAN_KERNEL_NUM_THREADS", 1)
+    config_options['MAX_NUM_ORDER_BY_PARTITIONS_PER_NODE'] = os.environ.get("MAX_NUM_ORDER_BY_PARTITIONS_PER_NODE", 20)
+    config_options['ORDER_BY_SAMPLES_RATIO'] = os.environ.get("ORDER_BY_SAMPLES_RATIO", 0.0002)
+    config_options['NUM_BYTES_PER_ORDER_BY_PARTITION'] = os.environ.get("NUM_BYTES_PER_ORDER_BY_PARTITION", 400000000)
+    config_options['MAX_SEND_MESSAGE_THREADS'] = os.environ.get("MAX_SEND_MESSAGE_THREADS", 20)
+    config_options['MEMORY_MONITOR_PERIOD'] = os.environ.get("MEMORY_MONITOR_PERIOD", 50)
+    config_options['TRANSPORT_BUFFER_BYTE_SIZE'] = os.environ.get("TRANSPORT_BUFFER_BYTE_SIZE", 10485760) # 10 MBs
+    config_options['BLAZING_LOGGING_DIRECTORY'] = os.environ.get("BLAZING_LOGGING_DIRECTORY", 'blazing_log')
     config_options['BLAZING_CACHE_DIRECTORY'] = os.environ.get("BLAZING_CACHE_DIRECTORY", '/tmp/')
+    config_options['LOGGING_LEVEL'] = os.environ.get("LOGGING_LEVEL", "trace")
 
     return config_options
+
 
 def attach_to_cluster(config, create_blazing_context=False):
     """Attaches to an existing cluster if available.
@@ -59,6 +71,7 @@ def attach_to_cluster(config, create_blazing_context=False):
             url = content.split("Scheduler ")[1].split(":" + str(port))[0]
             client = Client(address=f"{url}:{port}")
             print(f"Connected to {url}:{port}")
+            config["protocol"] = str(url)[0:3]
         except requests.exceptions.ConnectionError as e:
             sys.exit(
                 f"Unable to connect to existing dask scheduler dashboard to determine cluster type: {e}"
@@ -118,7 +131,7 @@ def worker_count_info(client, gpu_sizes=["16GB", "32GB", "40GB"], tol="2.1GB"):
     worker_info = client.scheduler_info()["workers"]
     for worker, info in worker_info.items():
         # Assumption is that a node is homogeneous (on a specific node all gpus have the same size)
-        worker_device_memory = info["gpu"]["memory-total"][0]
+        worker_device_memory = info["gpu"]["memory-total"]
         for gpu_size in gpu_sizes:
             if abs(parse_bytes(gpu_size) - worker_device_memory) < parse_bytes(tol):
                 counts_by_gpu_size[gpu_size] += 1

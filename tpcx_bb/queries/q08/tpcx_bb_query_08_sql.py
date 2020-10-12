@@ -28,6 +28,7 @@ from xbb_tools.utils import (
     run_query,
 )
 
+from dask.distributed import wait
 
 # -------- Q8 -----------
 q08_SECONDS_BEFORE_PURCHASE = 259200
@@ -142,10 +143,7 @@ def read_tables(data_dir, bc):
     bc.create_table("web_clickstreams", data_dir + "/web_clickstreams/*.parquet")
     bc.create_table("web_sales", data_dir + "/web_sales/*.parquet")
     bc.create_table("web_page", data_dir + "/web_page/*.parquet")
-    bc.create_table("web_returns", data_dir + "/web_returns/*.parquet")
     bc.create_table("date_dim", data_dir + "/date_dim/*.parquet")
-    bc.create_table("item", data_dir + "/item/*.parquet")
-    bc.create_table("warehouse", data_dir + "/warehouse/*.parquet")
 
 
 def main(data_dir, client, bc, config):
@@ -190,6 +188,8 @@ def main(data_dir, client, bc, config):
     web_page_newcols = ["wp_web_page_sk", "wp_type_codes"]
     web_page_df = web_page_df[web_page_newcols]
 
+    web_page_df = web_page_df.persist()
+    wait(web_page_df)
     bc.create_table('web_page_2', web_page_df)
 
     query_2 = f"""
@@ -202,8 +202,13 @@ def main(data_dir, client, bc, config):
         INNER JOIN web_page_2 ON wcs_web_page_sk = wp_web_page_sk
         WHERE wcs_user_sk IS NOT NULL
         AND wcs_click_date_sk BETWEEN {q08_start_dt} AND {q08_end_dt}
+        --in the future we want to remove this ORDER BY
+        ORDER BY wcs_user_sk
     """
     merged_df = bc.sql(query_2)
+
+    bc.drop_table("web_page_2")
+    del web_page_df
 
     merged_df = merged_df.repartition(columns=["wcs_user_sk"])
     merged_df["review_flag"] = merged_df.wp_type_codes == REVIEW_CAT_CODE
@@ -217,9 +222,11 @@ def main(data_dir, client, bc, config):
     unique_review_sales = sessionized.map_partitions(
         get_unique_sales_keys_from_sessions, review_cat_code=REVIEW_CAT_CODE
     )
-
+    
     unique_review_sales = unique_review_sales.to_frame()
 
+    unique_review_sales = unique_review_sales.persist()
+    wait(unique_review_sales)
     bc.create_table("reviews", unique_review_sales)
     last_query = f"""
         SELECT
@@ -237,6 +244,7 @@ def main(data_dir, client, bc, config):
     """
     result = bc.sql(last_query)
 
+    bc.drop_table("reviews")
     return result
 
 

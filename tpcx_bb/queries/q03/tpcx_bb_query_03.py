@@ -16,6 +16,8 @@
 
 import sys
 import os
+#from nvtx import annotate
+import time
 
 from xbb_tools.utils import (
     benchmark,
@@ -156,7 +158,7 @@ def find_items_viewed_before_purchase_kernel(
             else:
                 out_col[i * N + k - 1] = 0
 
-
+#@annotate("function_for_nsight", color="orange", domain="cudf_python")
 def apply_find_items_viewed(df, item_mappings):
     import cudf
 
@@ -182,6 +184,7 @@ def apply_find_items_viewed(df, item_mappings):
     # we know this can be int32, since it's going to contain item_sks
     out_arr = cuda.device_array(size * N, dtype=df["wcs_item_sk"].dtype)
 
+    print("let's do it\n")
     find_items_viewed_before_purchase_kernel.forall(size)(
         sample["relevant_idx_pos"],
         df["wcs_user_sk"],

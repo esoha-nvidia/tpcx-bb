@@ -22,7 +22,6 @@ import importlib
 import dask
 from dask.distributed import Client
 from dask.utils import parse_bytes
-from blazingsql import BlazingContext
 
 
 def get_config_options():
